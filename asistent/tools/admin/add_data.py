@@ -28,9 +28,9 @@ def add_data(
         corpus_name (str): The name of the corpus to add data to. If empty, the current corpus will be used.
         paths (List[str]): List of URLs or GCS paths to add to the corpus.
                           Supported formats:
-                          - Google Drive: "https://drive.google.com/file/d/{FILE_ID}/view"
-                          - Google Docs/Sheets/Slides: "https://docs.google.com/{type}/d/{FILE_ID}/..."
-                          - Google Cloud Storage: "gs://{BUCKET}/{PATH}"
+                          - Google Drive: "https://drive.google.com/file/d/{{FILE_ID}}/view"
+                          - Google Docs/Sheets/Slides: "https://docs.google.com/{{type}}/d/{{FILE_ID}}/..."
+                          - Google Cloud Storage: "gs://{{BUCKET}}/{{PATH}}"
                           Example: ["https://drive.google.com/file/d/123", "gs://my_bucket/my_files_dir"]
         tool_context (ToolContext): The tool context
 

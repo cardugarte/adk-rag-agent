@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Language and Communication Guidelines
+
+**IMPORTANT - Language Rules:**
+- **Communication with user**: Always respond in Spanish (from Argentina)
+- **Code writing**: Always write code, comments, docstrings, variable names, and function names in English
+- **Git commits**: Always write commit messages in English following conventional commit format
+- **Documentation**: Write technical documentation in English, but explain it to the user in Spanish when asked
+
+**Examples:**
+- ✅ Code: `def create_specialized_corpus(corpus_type: str):`
+- ✅ Commit: `feat: implement intelligent document detection`
+- ✅ User communication: "He implementado la funcionalidad de detección automática..."
+- ❌ Code in Spanish: `def crear_corpus_especializado(tipo_corpus: str):`
+- ❌ Commit in Spanish: `feat: implementar detección inteligente`
+
 ## Project Overview
 
 This is a Google Agent Development Kit (ADK) implementation of a RAG (Retrieval Augmented Generation) agent specialized in legal contract analysis using Google Cloud Vertex AI. The agent is designed to evolve into a comprehensive legal automation suite with:
@@ -260,3 +275,4 @@ The project contains 8 detailed issues organized across 5 epics with clear depen
 - Advanced analysis features depend on Template Analyzer
 - Integration features require foundation to be complete
 - Each issue has detailed acceptance criteria and story point estimates
+
