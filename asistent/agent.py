@@ -161,7 +161,7 @@ root_agent = Agent(
 
     **Resource Naming:**
     - Full Vertex AI resource names are used internally but hidden from users
-    - Specialized corpora use naming convention: "{{type}}_{{name}}" for organization
+    - Specialized corpora use naming convention: "<corpus_type>_<corpus_name>" for organization
     - Always use internal resource names when calling Vertex AI APIs
     
     ## Communication Guidelines
