@@ -5,12 +5,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Language and Communication Guidelines
 
 **IMPORTANT - Language Rules:**
+
 - **Communication with user**: Always respond in Spanish (from Argentina)
 - **Code writing**: Always write code, comments, docstrings, variable names, and function names in English
 - **Git commits**: Always write commit messages in English following conventional commit format
 - **Documentation**: Write technical documentation in English, but explain it to the user in Spanish when asked
 
 **Examples:**
+
 - ✅ Code: `def create_specialized_corpus(corpus_type: str):`
 - ✅ Commit: `feat: implement intelligent document detection`
 - ✅ User communication: "He implementado la funcionalidad de detección automática..."
@@ -28,9 +30,11 @@ This is a Google Agent Development Kit (ADK) implementation of a RAG (Retrieval 
 - **Advanced legal analysis** and compliance checking
 
 ### Vision
+
 Transform from a basic RAG agent into a complete legal assistant capable of drafting contracts, detecting inconsistencies, managing document workflows, and automating client communications while ensuring compliance with Argentine legal standards.
 
 ### Current Status
+
 **Phase 1 Foundation** - Multi-corpus architecture and smart analysis capabilities are in active development.
 
 ## Commands
@@ -116,7 +120,7 @@ Each corpus has specialized configurations for chunk size, overlap, and embeddin
 
 Future tools will be organized in specialized modules:
 
-```
+```text
 asistent/tools/
 ├── analysis/
 │   ├── template_analyzer.py
@@ -159,6 +163,7 @@ asistent/tools/
 ### Current Dependencies
 
 Main dependencies from `requirements.txt`:
+
 - `google-adk`: Google Agent Development Kit
 - `google-generativeai`: Gemini model access
 - `google-cloud-aiplatform`: Vertex AI integration
@@ -172,28 +177,33 @@ Main dependencies from `requirements.txt`:
 For the full roadmap implementation:
 
 **Google Workspace Integration:**
+
 - `google-api-python-client`: Google APIs client
 - `google-auth-oauthlib`: OAuth authentication
 - `google-auth-httplib2`: HTTP transport for Google APIs
 
 **Document Processing & Templates:**
+
 - `python-docx`: Word document manipulation
 - `jinja2`: Template engine for contract generation
 - `pdfplumber`: PDF text extraction
 
 **Data Processing & Analysis:**
+
 - `pandas`: Data analysis and manipulation
 - `scikit-learn`: Machine learning utilities
 - `spacy`: Natural language processing
 - `regex`: Advanced pattern matching
 
 **Argentine-specific Validations:**
+
 - `validate-docbr`: Document validation utilities
 - Custom validators for CUIT/DNI/addresses
 
 ## Project Commands
 
 ### GitHub Project Management
+
 ```bash
 # View project status
 gh project view 10 --owner cardugarte
@@ -203,6 +213,7 @@ gh project item-add 10 --owner cardugarte --url <issue-url>
 ```
 
 ### Development Workflow
+
 ```bash
 # Start working on an issue
 gh issue develop <issue-number> --repo cardugarte/adk-rag-agent
@@ -215,6 +226,7 @@ python -m pytest tests/
 ```
 
 ### Multi-Corpus Operations
+
 ```bash
 # Initialize all corpus types
 python -c "from asistent.tools.corpus_manager import initialize_all_corpus; initialize_all_corpus()"
@@ -233,7 +245,8 @@ python scripts/test_cross_corpus.py
 ## Development Roadmap & GitHub Project
 
 ### GitHub Project
-**URL**: https://github.com/users/cardugarte/projects/10
+
+**URL**: <https://github.com/users/cardugarte/projects/10>
 **Title**: Agente Legal Inteligente - RAG Development
 
 The project contains 8 detailed issues organized across 5 epics with clear dependencies and acceptance criteria.
@@ -241,22 +254,27 @@ The project contains 8 detailed issues organized across 5 epics with clear depen
 ### Development Phases
 
 #### Phase 1: Foundation - Multi-Corpus & Analysis (High Priority)
+
 - **Issue #1**: Corpus Manager - Foundation for multi-corpus architecture
 - **Issue #4**: Template Analyzer - Automatic contract type detection
 - **Issue #5**: Enhanced Consistency Checker - Argentine legal validations
 
 #### Phase 2: Smart Generation & Validation (High Priority)
+
 - **Issue #2**: Cross-Corpus Query System - Intelligent multi-corpus searches
 - **Issue #3**: Legal Compliance Checker - Automated legal validation
 - **Issue #8**: Smart Contract Generator - Automated contract generation
 
 #### Phase 3: Workspace Integration (Medium Priority)
+
 - **Issue #6**: Google Docs Auto-Creator - Document generation integration
 
 #### Phase 4: Communication Automation (Medium Priority)
+
 - **Issue #7**: Email Automation System - Automated client communications
 
 ### Implementation Order
+
 1. **Corpus Manager** (Foundation - enables all other features)
 2. **Template Analyzer** (Can be developed in parallel with #1)
 3. **Cross-Corpus Query System** (Depends on Corpus Manager)
@@ -265,14 +283,16 @@ The project contains 8 detailed issues organized across 5 epics with clear depen
 6. **Smart Contract Generator** (Depends on #1-#5)
 
 ### Issue Labels Organization
+
 - **Epics**: `epic:multi-corpus`, `epic:smart-analysis`, `epic:workspace-integration`, `epic:communication`, `epic:advanced-ai`
 - **Corpus Types**: `corpus:certificaciones`, `corpus:compra-venta`, `corpus:locacion`, `corpus:poderes`, `corpus:reglamento-ph`, `corpus:marco-legal`
 - **Priority**: `priority:high`, `priority:medium`, `priority:low`
 - **Type**: `type:foundation`, `type:feature`
 
 ### Key Dependencies
+
 - All corpus-related features depend on Issue #1 (Corpus Manager)
 - Advanced analysis features depend on Template Analyzer
 - Integration features require foundation to be complete
 - Each issue has detailed acceptance criteria and story point estimates
-
+- does not include co-authorship mentions or third-party advertising (e.g., Claude Code).
