@@ -8,12 +8,12 @@ from typing import List
 from google.adk.tools.tool_context import ToolContext
 from vertexai import rag
 
-from ..config import (
+from ...config import (
     DEFAULT_CHUNK_OVERLAP,
     DEFAULT_CHUNK_SIZE,
     DEFAULT_EMBEDDING_REQUESTS_PER_MIN,
 )
-from .utils import check_corpus_exists, get_corpus_resource_name
+from ..utils import check_corpus_exists, get_corpus_resource_name
 
 
 def add_data(
@@ -28,9 +28,9 @@ def add_data(
         corpus_name (str): The name of the corpus to add data to. If empty, the current corpus will be used.
         paths (List[str]): List of URLs or GCS paths to add to the corpus.
                           Supported formats:
-                          - Google Drive: "https://drive.google.com/file/d/{FILE_ID}/view"
-                          - Google Docs/Sheets/Slides: "https://docs.google.com/{type}/d/{FILE_ID}/..."
-                          - Google Cloud Storage: "gs://{BUCKET}/{PATH}"
+                          - Google Drive: "https://drive.google.com/file/d/{{FILE_ID}}/view"
+                          - Google Docs/Sheets/Slides: "https://docs.google.com/{{type}}/d/{{FILE_ID}}/..."
+                          - Google Cloud Storage: "gs://{{BUCKET}}/{{PATH}}"
                           Example: ["https://drive.google.com/file/d/123", "gs://my_bucket/my_files_dir"]
         tool_context (ToolContext): The tool context
 
