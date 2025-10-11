@@ -1,0 +1,17 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/rag-legal-agent-ui:latest'
+      - '-f'
+      - 'Dockerfile.web'
+      - '.'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/rag-legal-agent-ui:latest'
+
+images:
+  - 'gcr.io/$PROJECT_ID/rag-legal-agent-ui:latest'

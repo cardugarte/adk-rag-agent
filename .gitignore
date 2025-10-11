@@ -1,0 +1,8 @@
+.env
+__pycache__/
+.venv/
+
+# Logs
+*.log
+*.err.log
+supervisord.pid

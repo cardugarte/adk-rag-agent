@@ -33,3 +33,4 @@ except Exception as e:
 
 # Import agent after initialization is complete
 from . import agent
+from .agent import root_agent

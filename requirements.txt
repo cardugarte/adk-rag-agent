@@ -1,7 +1,11 @@
-google-adk
+google-cloud-aiplatform[adk,agent_engines]
 google-generativeai
 python-dotenv
-google-cloud-aiplatform
 google-cloud-storage
 google-genai
-git-python
+authlib
+requests
+google-cloud-secret-manager
+uvicorn
+python-multipart
+itsdangerous
