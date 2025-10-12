@@ -32,9 +32,10 @@ is_production = os.environ.get("K_SERVICE") is not None  # K_SERVICE exists in C
 app = SessionMiddleware(
     AuthMiddleware(fastapi_app),
     secret_key=get_secret("flask-secret-key"),
-    max_age=None,  # Session cookie - expires when browser closes
-    same_site="lax",  # CSRF protection
-    https_only=is_production  # Only require HTTPS in production
+    max_age=3600,  # 1 hour session expiration (OAuth flow needs time)
+    same_site="none" if is_production else "lax",  # "none" for Cloud Run OAuth, "lax" for local
+    https_only=is_production,  # Only require HTTPS in production
+    path="/"  # Ensure cookies are sent for all paths
 )
 
 if __name__ == "__main__":
