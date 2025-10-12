@@ -33,90 +33,48 @@ SERVICE_ACCOUNT_FILE = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
 
 def get_drive_service(user_email: str = None, token_manager = None):
     """
-    Get Google Drive API service using user OAuth tokens or Service Account fallback.
+    Get Google Drive API service using Service Account with domain-wide delegation.
 
-    SECURITY PRIORITY:
-    1. Use user's OAuth tokens from TokenManager (if available)
-    2. Fall back to Service Account with delegation (if configured)
-    3. Fall back to Application Default Credentials
+    SIMPLIFIED APPROACH:
+    - Use Service Account with delegation to impersonate user
+    - No OAuth tokens, no token management complexity
+    - Service Account must be authorized in Google Workspace Admin Console
 
     Args:
-        user_email (str, optional): Email of the user
-        token_manager (TokenManager, optional): TokenManager instance for retrieving user tokens
+        user_email (str, optional): Email of the user to impersonate
 
     Returns:
         Google Drive API service instance
-
-    Example:
-        # Use user's OAuth tokens (recommended)
-        token_manager = TokenManager(project_id)
-        service = get_drive_service(user_email="user@example.com", token_manager=token_manager)
-
-        # Fallback to Service Account
-        service = get_drive_service()
     """
     scopes = [
         'https://www.googleapis.com/auth/drive',
         'https://www.googleapis.com/auth/drive.file'
     ]
 
-    # PRIORITY 1: Use user's OAuth tokens from TokenManager
-    if user_email and token_manager:
-        try:
-            # Import OAuth client here to avoid circular imports
-            from authlib.integrations.starlette_client import OAuth
-            oauth = OAuth()
-            oauth.register(
-                name='google',
-                client_id=get_secret("google-client-id"),
-                client_secret=get_secret("google-client-secret"),
-                server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-            )
+    # Use Application Default Credentials (Compute Engine Service Account in Cloud Run)
+    credentials, _ = default(scopes=scopes)
 
-            # Get valid access token (auto-refreshes if needed)
-            access_token = token_manager.get_valid_access_token(user_email, oauth)
-
-            if access_token:
-                # Create credentials from user's access token
-                credentials = Credentials(token=access_token)
-                logger.info(f"Using user OAuth token for Drive service: {user_email}")
-                return build('drive', 'v3', credentials=credentials)
-            else:
-                logger.warning(f"No valid OAuth token for {user_email}, falling back to Service Account")
-        except Exception as e:
-            logger.error(f"Failed to get user OAuth token for {user_email}: {str(e)}, falling back to Service Account")
-
-    # FALLBACK: Use Service Account with delegation (if available)
-    if SERVICE_ACCOUNT_FILE and os.path.exists(SERVICE_ACCOUNT_FILE):
-        credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE,
-            scopes=scopes
-        )
-        if user_email:
-            credentials = credentials.with_subject(user_email)
-        logger.info("Using Service Account for Drive service")
+    # Delegate to user if email provided
+    if user_email and hasattr(credentials, 'with_subject'):
+        credentials = credentials.with_subject(user_email)
+        logger.info(f"Using Service Account with delegation for user: {user_email}")
     else:
-        # Fall back to Application Default Credentials
-        credentials, _ = default()
-        if user_email and hasattr(credentials, 'with_subject'):
-            credentials = credentials.with_scopes(scopes).with_subject(user_email)
-        logger.info("Using Application Default Credentials for Drive service")
+        logger.info("Using Service Account without delegation")
 
     return build('drive', 'v3', credentials=credentials)
 
 
 def get_docs_service(user_email: str = None, token_manager = None):
     """
-    Get Google Docs API service using user OAuth tokens or Service Account fallback.
+    Get Google Docs API service using Service Account with domain-wide delegation.
 
-    SECURITY PRIORITY:
-    1. Use user's OAuth tokens from TokenManager (if available)
-    2. Fall back to Service Account with delegation (if configured)
-    3. Fall back to Application Default Credentials
+    SIMPLIFIED APPROACH:
+    - Use Service Account with delegation to impersonate user
+    - No OAuth tokens, no token management complexity
+    - Service Account must be authorized in Google Workspace Admin Console
 
     Args:
-        user_email (str, optional): Email of the user
-        token_manager (TokenManager, optional): TokenManager instance for retrieving user tokens
+        user_email (str, optional): Email of the user to impersonate
 
     Returns:
         Google Docs API service instance
@@ -127,44 +85,15 @@ def get_docs_service(user_email: str = None, token_manager = None):
         'https://www.googleapis.com/auth/drive.file'
     ]
 
-    # PRIORITY 1: Use user's OAuth tokens from TokenManager
-    if user_email and token_manager:
-        try:
-            from authlib.integrations.starlette_client import OAuth
-            oauth = OAuth()
-            oauth.register(
-                name='google',
-                client_id=get_secret("google-client-id"),
-                client_secret=get_secret("google-client-secret"),
-                server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-            )
+    # Use Application Default Credentials (Compute Engine Service Account in Cloud Run)
+    credentials, _ = default(scopes=scopes)
 
-            access_token = token_manager.get_valid_access_token(user_email, oauth)
-
-            if access_token:
-                credentials = Credentials(token=access_token)
-                logger.info(f"Using user OAuth token for Docs service: {user_email}")
-                return build('docs', 'v1', credentials=credentials)
-            else:
-                logger.warning(f"No valid OAuth token for {user_email}, falling back to Service Account")
-        except Exception as e:
-            logger.error(f"Failed to get user OAuth token for {user_email}: {str(e)}, falling back to Service Account")
-
-    # FALLBACK: Use Service Account with delegation (if available)
-    if SERVICE_ACCOUNT_FILE and os.path.exists(SERVICE_ACCOUNT_FILE):
-        credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE,
-            scopes=scopes
-        )
-        if user_email:
-            credentials = credentials.with_subject(user_email)
-        logger.info("Using Service Account for Docs service")
+    # Delegate to user if email provided
+    if user_email and hasattr(credentials, 'with_subject'):
+        credentials = credentials.with_subject(user_email)
+        logger.info(f"Using Service Account with delegation for user: {user_email}")
     else:
-        # Fall back to Application Default Credentials
-        credentials, _ = default()
-        if user_email and hasattr(credentials, 'with_subject'):
-            credentials = credentials.with_scopes(scopes).with_subject(user_email)
-        logger.info("Using Application Default Credentials for Docs service")
+        logger.info("Using Service Account without delegation")
 
     return build('docs', 'v1', credentials=credentials)
 
