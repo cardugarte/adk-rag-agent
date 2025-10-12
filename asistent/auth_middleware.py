@@ -1,10 +1,13 @@
 
 import os
+import time
 from starlette.applications import Starlette
 from starlette.responses import RedirectResponse, HTMLResponse
 from starlette.routing import Route
 from authlib.integrations.starlette_client import OAuth
+from authlib.common.security import generate_token
 from asistent.secrets import get_secret
+from asistent.tools.token_manager import TokenManager
 
 # --- HTML Templates ---
 LOGIN_PAGE_HTML = """
@@ -209,18 +212,72 @@ oauth.register(
     client_id=get_secret("google-client-id"),
     client_secret=get_secret("google-client-secret"),
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile'}
+    client_kwargs={
+        'scope': 'openid email profile '
+                 'https://www.googleapis.com/auth/drive.file '
+                 'https://www.googleapis.com/auth/documents'
+    }
 )
 
 async def login(request):
+    """
+    Initiate OAuth2 login flow with PKCE and state parameter.
+
+    SECURITY:
+    - PKCE (code_verifier/code_challenge) prevents authorization code interception
+    - State parameter prevents CSRF attacks
+    """
     # Force HTTPS for Cloud Run (behind proxy)
     redirect_uri = request.url_for('authorize')
     # Replace http:// with https:// when behind a proxy
     redirect_uri = str(redirect_uri).replace('http://', 'https://')
-    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+    # Generate PKCE code verifier (48 bytes = secure random string)
+    code_verifier = generate_token(48)
+    request.session['code_verifier'] = code_verifier
+
+    # Generate state parameter for CSRF protection (32 bytes)
+    state = generate_token(32)
+    request.session['oauth_state'] = state
+
+    return await oauth.google.authorize_redirect(
+        request,
+        redirect_uri,
+        code_challenge=code_verifier,
+        code_challenge_method='S256',
+        state=state
+    )
 
 async def authorize(request):
-    token = await oauth.google.authorize_access_token(request)
+    """
+    Handle OAuth2 callback and store tokens securely.
+
+    SECURITY:
+    - Verifies state parameter (CSRF protection)
+    - Verifies PKCE code verifier
+    - Stores tokens in Secret Manager (NOT in session/cookies)
+    - Only stores user info in session
+    """
+    # SECURITY: Verify state parameter to prevent CSRF
+    expected_state = request.session.pop('oauth_state', None)
+    received_state = request.query_params.get('state')
+
+    if not expected_state or expected_state != received_state:
+        return HTMLResponse(
+            "<h1>Error de Seguridad</h1>"
+            "<p>El parámetro 'state' no coincide. Posible ataque CSRF detectado.</p>"
+            "<p><a href='/login-page'>Volver a intentar</a></p>",
+            status_code=403
+        )
+
+    # SECURITY: Retrieve PKCE code verifier
+    code_verifier = request.session.pop('code_verifier', None)
+
+    # Exchange authorization code for tokens
+    token = await oauth.google.authorize_access_token(
+        request,
+        code_verifier=code_verifier
+    )
     user_info = token.get('userinfo')
 
     if user_info:
@@ -231,12 +288,53 @@ async def authorize(request):
         if email not in allowed_users:
             return HTMLResponse(UNAUTHORIZED_PAGE_HTML.format(email=email), status_code=403)
 
-        request.session['user'] = user_info
+        # SECURITY: Store ONLY user info in session (NO tokens)
+        request.session['user'] = {
+            'email': email,
+            'name': user_info.get('name'),
+            'picture': user_info.get('picture'),
+            'session_start': int(time.time())  # For auditing
+        }
+
+        # SECURITY: Store tokens in Secret Manager (encrypted at-rest)
+        try:
+            token_manager = TokenManager(os.environ.get('GOOGLE_CLOUD_PROJECT'))
+            expires_in = token.get('expires_in', 3600)
+            expires_at = int(time.time()) + expires_in
+
+            token_manager.store_user_tokens(
+                user_email=email,
+                access_token=token.get('access_token'),
+                refresh_token=token.get('refresh_token'),
+                expires_at=expires_at
+            )
+        except Exception as e:
+            # Log error but don't fail the login
+            # User can still use the app, Drive operations will fail gracefully
+            import logging
+            logging.error(f"Failed to store tokens for {email}: {str(e)}")
+
         return RedirectResponse(url='/')
 
     return HTMLResponse("Login failed", status_code=400)
 
 async def logout(request):
+    """
+    Logout user and revoke tokens.
+
+    SECURITY: Deletes tokens from Secret Manager to prevent reuse.
+    """
+    user = request.session.get('user')
+
+    if user and 'email' in user:
+        # SECURITY: Revoke tokens from Secret Manager
+        try:
+            token_manager = TokenManager(os.environ.get('GOOGLE_CLOUD_PROJECT'))
+            token_manager.delete_user_tokens(user['email'])
+        except Exception as e:
+            import logging
+            logging.error(f"Failed to delete tokens for {user['email']}: {str(e)}")
+
     request.session.pop('user', None)
     return RedirectResponse(url='/login-page')
 

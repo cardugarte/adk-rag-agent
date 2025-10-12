@@ -4,19 +4,19 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/rag-legal-agent-ui:latest'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/rag-legal-agent-ui:latest'
       - '-f'
       - 'Dockerfile.web'
       - '.'
 
-  # Push the container image to Container Registry
+  # Push the container image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/rag-legal-agent-ui:latest'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/rag-legal-agent-ui:latest'
 
 images:
-  - 'gcr.io/$PROJECT_ID/rag-legal-agent-ui:latest'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/rag-legal-agent-ui:latest'
 
 options:
   machineType: 'E2_HIGHCPU_8'

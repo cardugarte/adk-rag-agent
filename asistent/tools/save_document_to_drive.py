@@ -1,8 +1,14 @@
 """
 Tool for saving approved legal contracts to Google Drive as formatted Google Docs.
+
+SECURITY:
+- Uses TokenManager to retrieve user's OAuth tokens from Secret Manager
+- Tokens are never exposed in session/cookies
+- Supports automatic token refresh
 """
 
 import logging
+import os
 
 from google.adk.tools.tool_context import ToolContext
 
@@ -14,6 +20,7 @@ from .google_workspace_utils import (
     get_next_version_name,
     normalize_filename,
 )
+from .token_manager import TokenManager
 
 logger = logging.getLogger(__name__)
 
@@ -101,21 +108,26 @@ def save_document_to_drive(
         logger.info(f"Document title: {document_title}")
         logger.info(f"Document type: {document_type}")
 
-        # Step 2: Ensure user folder exists (create if needed)
-        user_folder_id = ensure_user_folder(user_email)
+        # Step 2: Initialize TokenManager to retrieve user's OAuth tokens
+        # SECURITY: Tokens are retrieved from Secret Manager, not from session/cookies
+        token_manager = TokenManager(os.environ.get('GOOGLE_CLOUD_PROJECT'))
 
-        # Step 3: Generate normalized base filename
+        # Step 3: Ensure user folder exists (create if needed)
+        user_folder_id = ensure_user_folder(user_email, token_manager)
+
+        # Step 4: Generate normalized base filename
         base_name = normalize_filename(document_title)
 
-        # Step 4: Get next version name (handles versioning automatically)
-        versioned_name = get_next_version_name(user_folder_id, base_name, user_email)
+        # Step 5: Get next version name (handles versioning automatically)
+        versioned_name = get_next_version_name(user_folder_id, base_name, user_email, token_manager)
 
-        # Step 5: Create formatted Google Doc
+        # Step 6: Create formatted Google Doc
         doc_id, doc_url = create_formatted_document(
             title=versioned_name,
             content=document_content,
             folder_id=user_folder_id,
-            user_email=user_email
+            user_email=user_email,
+            token_manager=token_manager
         )
 
         # Step 7: Store document info in context state (for potential future reference)

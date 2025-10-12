@@ -8,6 +8,8 @@ from google.adk.cli.fast_api import get_fast_api_app
 from asistent.auth_middleware import AuthMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from asistent.secrets import get_secret
+from starlette.requests import Request
+
 
 # Get the ADK FastAPI app
 # This creates the complete ADK web server with all agents in the current directory
@@ -23,12 +25,16 @@ fastapi_app = get_fast_api_app(
 # 1. SessionMiddleware (outermost) - manages cookies
 # 2. AuthMiddleware - validates authentication
 # 3. FastAPI app (innermost) - actual ADK application
+
+# Determine if running in production (Cloud Run) or locally
+is_production = os.environ.get("K_SERVICE") is not None  # K_SERVICE exists in Cloud Run
+
 app = SessionMiddleware(
     AuthMiddleware(fastapi_app),
     secret_key=get_secret("flask-secret-key"),
     max_age=None,  # Session cookie - expires when browser closes
     same_site="lax",  # CSRF protection
-    https_only=True  # Only send cookie over HTTPS (important for production)
+    https_only=is_production  # Only require HTTPS in production
 )
 
 if __name__ == "__main__":

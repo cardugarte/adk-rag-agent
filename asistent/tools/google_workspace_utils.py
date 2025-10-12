@@ -2,10 +2,15 @@
 Utility functions for Google Workspace (Drive and Docs) integration.
 
 This module provides helper functions for:
-- Authenticating with Google Drive and Docs APIs
+- Authenticating with Google Drive and Docs APIs using user OAuth tokens
 - Managing user folders in Drive
 - Creating and formatting Google Docs
 - Version control for documents
+
+SECURITY:
+- Prioritizes user OAuth tokens from TokenManager
+- Falls back to Service Account for internal operations
+- Supports automatic token refresh
 """
 
 import logging
@@ -15,9 +20,10 @@ from typing import Optional, Tuple
 
 from google.auth import default
 from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
-from ..secrets import get_drive_root_folder_id
+from ..secrets import get_drive_root_folder_id, get_secret
 
 logger = logging.getLogger(__name__)
 
@@ -25,23 +31,62 @@ logger = logging.getLogger(__name__)
 SERVICE_ACCOUNT_FILE = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
 
 
-def get_drive_service(user_email: str = None):
+def get_drive_service(user_email: str = None, token_manager = None):
     """
-    Get Google Drive API service using Application Default Credentials with Domain-Wide Delegation.
+    Get Google Drive API service using user OAuth tokens or Service Account fallback.
+
+    SECURITY PRIORITY:
+    1. Use user's OAuth tokens from TokenManager (if available)
+    2. Fall back to Service Account with delegation (if configured)
+    3. Fall back to Application Default Credentials
 
     Args:
-        user_email (str, optional): Email of the user to impersonate.
-                                   If None, uses default credentials without delegation.
+        user_email (str, optional): Email of the user
+        token_manager (TokenManager, optional): TokenManager instance for retrieving user tokens
 
     Returns:
         Google Drive API service instance
+
+    Example:
+        # Use user's OAuth tokens (recommended)
+        token_manager = TokenManager(project_id)
+        service = get_drive_service(user_email="user@example.com", token_manager=token_manager)
+
+        # Fallback to Service Account
+        service = get_drive_service()
     """
     scopes = [
         'https://www.googleapis.com/auth/drive',
         'https://www.googleapis.com/auth/drive.file'
     ]
 
-    # Try to use Service Account key file if available (supports delegation)
+    # PRIORITY 1: Use user's OAuth tokens from TokenManager
+    if user_email and token_manager:
+        try:
+            # Import OAuth client here to avoid circular imports
+            from authlib.integrations.starlette_client import OAuth
+            oauth = OAuth()
+            oauth.register(
+                name='google',
+                client_id=get_secret("google-client-id"),
+                client_secret=get_secret("google-client-secret"),
+                server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+            )
+
+            # Get valid access token (auto-refreshes if needed)
+            access_token = token_manager.get_valid_access_token(user_email, oauth)
+
+            if access_token:
+                # Create credentials from user's access token
+                credentials = Credentials(token=access_token)
+                logger.info(f"Using user OAuth token for Drive service: {user_email}")
+                return build('drive', 'v3', credentials=credentials)
+            else:
+                logger.warning(f"No valid OAuth token for {user_email}, falling back to Service Account")
+        except Exception as e:
+            logger.error(f"Failed to get user OAuth token for {user_email}: {str(e)}, falling back to Service Account")
+
+    # FALLBACK: Use Service Account with delegation (if available)
     if SERVICE_ACCOUNT_FILE and os.path.exists(SERVICE_ACCOUNT_FILE):
         credentials = service_account.Credentials.from_service_account_file(
             SERVICE_ACCOUNT_FILE,
@@ -49,22 +94,29 @@ def get_drive_service(user_email: str = None):
         )
         if user_email:
             credentials = credentials.with_subject(user_email)
+        logger.info("Using Service Account for Drive service")
     else:
         # Fall back to Application Default Credentials
         credentials, _ = default()
         if user_email and hasattr(credentials, 'with_subject'):
             credentials = credentials.with_scopes(scopes).with_subject(user_email)
+        logger.info("Using Application Default Credentials for Drive service")
 
     return build('drive', 'v3', credentials=credentials)
 
 
-def get_docs_service(user_email: str = None):
+def get_docs_service(user_email: str = None, token_manager = None):
     """
-    Get Google Docs API service using Application Default Credentials with Domain-Wide Delegation.
+    Get Google Docs API service using user OAuth tokens or Service Account fallback.
+
+    SECURITY PRIORITY:
+    1. Use user's OAuth tokens from TokenManager (if available)
+    2. Fall back to Service Account with delegation (if configured)
+    3. Fall back to Application Default Credentials
 
     Args:
-        user_email (str, optional): Email of the user to impersonate.
-                                   If None, uses default credentials without delegation.
+        user_email (str, optional): Email of the user
+        token_manager (TokenManager, optional): TokenManager instance for retrieving user tokens
 
     Returns:
         Google Docs API service instance
@@ -75,7 +127,30 @@ def get_docs_service(user_email: str = None):
         'https://www.googleapis.com/auth/drive.file'
     ]
 
-    # Try to use Service Account key file if available (supports delegation)
+    # PRIORITY 1: Use user's OAuth tokens from TokenManager
+    if user_email and token_manager:
+        try:
+            from authlib.integrations.starlette_client import OAuth
+            oauth = OAuth()
+            oauth.register(
+                name='google',
+                client_id=get_secret("google-client-id"),
+                client_secret=get_secret("google-client-secret"),
+                server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+            )
+
+            access_token = token_manager.get_valid_access_token(user_email, oauth)
+
+            if access_token:
+                credentials = Credentials(token=access_token)
+                logger.info(f"Using user OAuth token for Docs service: {user_email}")
+                return build('docs', 'v1', credentials=credentials)
+            else:
+                logger.warning(f"No valid OAuth token for {user_email}, falling back to Service Account")
+        except Exception as e:
+            logger.error(f"Failed to get user OAuth token for {user_email}: {str(e)}, falling back to Service Account")
+
+    # FALLBACK: Use Service Account with delegation (if available)
     if SERVICE_ACCOUNT_FILE and os.path.exists(SERVICE_ACCOUNT_FILE):
         credentials = service_account.Credentials.from_service_account_file(
             SERVICE_ACCOUNT_FILE,
@@ -83,11 +158,13 @@ def get_docs_service(user_email: str = None):
         )
         if user_email:
             credentials = credentials.with_subject(user_email)
+        logger.info("Using Service Account for Docs service")
     else:
         # Fall back to Application Default Credentials
         credentials, _ = default()
         if user_email and hasattr(credentials, 'with_subject'):
             credentials = credentials.with_scopes(scopes).with_subject(user_email)
+        logger.info("Using Application Default Credentials for Docs service")
 
     return build('docs', 'v1', credentials=credentials)
 
@@ -134,13 +211,14 @@ def normalize_filename(title: str) -> str:
     return filename
 
 
-def ensure_user_folder(user_email: str) -> str:
+def ensure_user_folder(user_email: str, token_manager = None) -> str:
     """
     Ensure a user folder exists in the Drive root folder.
     Creates the folder if it doesn't exist.
 
     Args:
         user_email (str): User's email address (used as folder name)
+        token_manager (TokenManager, optional): TokenManager for user OAuth tokens
 
     Returns:
         str: The folder ID
@@ -149,8 +227,8 @@ def ensure_user_folder(user_email: str) -> str:
         Exception: If folder cannot be created or accessed
     """
     try:
-        # Get Drive service with user delegation
-        drive_service = get_drive_service(user_email)
+        # Get Drive service with user OAuth tokens or fallback
+        drive_service = get_drive_service(user_email, token_manager)
 
         root_folder_id = get_drive_root_folder_id()
         logger.info(f"Ensuring folder for user: {user_email}")
@@ -196,7 +274,7 @@ def ensure_user_folder(user_email: str) -> str:
         raise
 
 
-def get_next_version_name(folder_id: str, base_name: str, user_email: str) -> str:
+def get_next_version_name(folder_id: str, base_name: str, user_email: str, token_manager = None) -> str:
     """
     Find existing versions of a document and return the next version name.
 
@@ -205,7 +283,8 @@ def get_next_version_name(folder_id: str, base_name: str, user_email: str) -> st
     Args:
         folder_id (str): The folder to search in
         base_name (str): The base filename (without version)
-        user_email (str): User's email for delegation
+        user_email (str): User's email
+        token_manager (TokenManager, optional): TokenManager for user OAuth tokens
 
     Returns:
         str: The versioned filename
@@ -217,8 +296,8 @@ def get_next_version_name(folder_id: str, base_name: str, user_email: str) -> st
         - Exists v1, v2: "contrato-compra-venta-juan-perez-v3"
     """
     try:
-        # Get Drive service with user delegation
-        drive_service = get_drive_service(user_email)
+        # Get Drive service with user OAuth tokens or fallback
+        drive_service = get_drive_service(user_email, token_manager)
 
         logger.info(f"Checking for existing versions of: {base_name}")
 
@@ -285,7 +364,8 @@ def create_formatted_document(
     title: str,
     content: str,
     folder_id: str,
-    user_email: str
+    user_email: str,
+    token_manager = None
 ) -> Tuple[str, str]:
     """
     Create a Google Doc with rich formatting and save it to a specific folder.
@@ -294,7 +374,8 @@ def create_formatted_document(
         title (str): Document title
         content (str): Document content (plain text)
         folder_id (str): Drive folder ID where document will be saved
-        user_email (str): User's email for delegation
+        user_email (str): User's email
+        token_manager (TokenManager, optional): TokenManager for user OAuth tokens
 
     Returns:
         tuple: (document_id, document_url)
@@ -303,9 +384,9 @@ def create_formatted_document(
         Exception: If document cannot be created
     """
     try:
-        # Get services with user delegation
-        docs_service = get_docs_service(user_email)
-        drive_service = get_drive_service(user_email)
+        # Get services with user OAuth tokens or fallback
+        docs_service = get_docs_service(user_email, token_manager)
+        drive_service = get_drive_service(user_email, token_manager)
 
         logger.info(f"Creating document: {title}")
 
@@ -397,13 +478,14 @@ def parse_and_format_content(content: str) -> list:
     return requests
 
 
-def list_documents_in_folder(folder_id: str, user_email: str) -> list:
+def list_documents_in_folder(folder_id: str, user_email: str, token_manager = None) -> list:
     """
     List all Google Docs in a specific folder.
 
     Args:
         folder_id (str): The folder ID
-        user_email (str): User's email for delegation
+        user_email (str): User's email
+        token_manager (TokenManager, optional): TokenManager for user OAuth tokens
 
     Returns:
         list: List of document metadata dictionaries
@@ -416,8 +498,8 @@ def list_documents_in_folder(folder_id: str, user_email: str) -> list:
         - webViewLink: Shareable link
     """
     try:
-        # Get Drive service with user delegation
-        drive_service = get_drive_service(user_email)
+        # Get Drive service with user OAuth tokens or fallback
+        drive_service = get_drive_service(user_email, token_manager)
 
         logger.info(f"Listing documents in folder: {folder_id}")
 
