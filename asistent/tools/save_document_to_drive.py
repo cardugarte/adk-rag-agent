@@ -75,33 +75,16 @@ def save_document_to_drive(
     """
     try:
         # Step 1: Get user email from tool context state
-        # Try multiple sources for the user email
-        user_email = None
-
-        # Source 1: Check if already stored in state
+        # The user_email is injected into session.state by our custom query endpoint
+        # in run_web.py, which ensures it's always available for authenticated users
         user_email = tool_context.state.get("user_email")
 
-        # Source 2: Check if user_id contains an email (ADK Web passes user info)
-        if not user_email and hasattr(tool_context, 'user_id'):
-            potential_email = str(tool_context.user_id)
-            if '@' in potential_email:
-                user_email = potential_email
-                # Store it for future use
-                tool_context.state["user_email"] = user_email
-
-        # Source 3: Check session metadata (if available)
-        if not user_email and hasattr(tool_context, 'session'):
-            session = tool_context.session
-            if hasattr(session, 'user_id') and '@' in str(session.user_id):
-                user_email = str(session.user_id)
-                tool_context.state["user_email"] = user_email
-
         if not user_email:
-            logger.error("User email not found in tool context")
-            logger.error(f"Available tool_context attributes: {dir(tool_context)}")
+            logger.error("User email not found in tool context state")
+            logger.error(f"Available state keys: {list(tool_context.state.keys())}")
             return {
                 "status": "error",
-                "message": "Usuario no autenticado. No se pudo identificar el email del usuario. Por favor, asegúrate de estar logueado correctamente.",
+                "message": "Usuario no autenticado. Por favor, recarga la página e intenta nuevamente.",
             }
 
         logger.info(f"Saving document for user: {user_email}")
