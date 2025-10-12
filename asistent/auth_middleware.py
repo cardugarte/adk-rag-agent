@@ -1,6 +1,8 @@
 
 import os
 import time
+import hashlib
+import base64
 from starlette.applications import Starlette
 from starlette.responses import RedirectResponse, HTMLResponse
 from starlette.routing import Route
@@ -234,6 +236,13 @@ async def login(request):
 
     # Generate PKCE code verifier (48 bytes = secure random string)
     code_verifier = generate_token(48)
+
+    # SECURITY: Compute code_challenge as SHA256 hash of code_verifier (RFC 7636)
+    # This is the correct PKCE flow: hash the verifier before sending to OAuth provider
+    code_challenge = base64.urlsafe_b64encode(
+        hashlib.sha256(code_verifier.encode('ascii')).digest()
+    ).decode('ascii').rstrip('=')
+
     request.session['code_verifier'] = code_verifier
 
     # Generate state parameter for CSRF protection (32 bytes)
@@ -243,7 +252,7 @@ async def login(request):
     return await oauth.google.authorize_redirect(
         request,
         redirect_uri,
-        code_challenge=code_verifier,
+        code_challenge=code_challenge,
         code_challenge_method='S256',
         state=state
     )
