@@ -5,7 +5,7 @@ Tool for deleting a specific document from a Vertex AI RAG corpus.
 from google.adk.tools.tool_context import ToolContext
 from vertexai import rag
 
-from .utils import check_corpus_exists, get_corpus_resource_name
+from ..utils import check_corpus_exists, get_corpus_resource_name
 
 
 def delete_document(
