@@ -9,10 +9,30 @@ from ..secrets import get_secret
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create instances of the toolsets
-calendar_tool_set = CalendarToolset()
-docs_tool_set = DocsToolset()
-gmail_tool_set = GmailToolset()
+# Define desired tools for each toolset
+GMAIL_TOOLS = [
+    "gmail_users_messages_send",
+    "gmail_users_drafts_create",
+    "gmail_users_drafts_send",
+]
+
+DOCS_TOOLS = [
+    "docs_documents_create",
+    "docs_documents_get",
+    "docs_documents_batch_update",
+]
+
+CALENDAR_TOOLS = [
+    "calendar_events_insert",
+    "calendar_events_list",
+    "calendar_events_update",
+    "calendar_events_delete",
+]
+
+# Create instances of the toolsets with tool_filter parameter
+calendar_tool_set = CalendarToolset(tool_filter=CALENDAR_TOOLS)
+docs_tool_set = DocsToolset(tool_filter=DOCS_TOOLS)
+gmail_tool_set = GmailToolset(tool_filter=GMAIL_TOOLS)
 
 # Get OAuth credentials from Secret Manager
 CLIENT_ID = get_secret("google-client-id")
