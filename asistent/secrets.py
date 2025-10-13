@@ -95,24 +95,3 @@ def get_allowed_users() -> list:
         return []
 
 
-def get_oauth_credentials() -> tuple[str, str]:
-    """
-    Get OAuth client ID and secret from Secret Manager.
-
-    Returns:
-        tuple: (client_id, client_secret)
-    """
-    try:
-        client_id = get_secret("oauth-client-id")
-        client_secret = get_secret("oauth-client-secret")
-        if client_id and client_secret:
-            return client_id, client_secret
-    except Exception as e:
-        logger.warning(f"Could not retrieve OAuth credentials from Secret Manager: {str(e)}")
-
-    # Fallback to environment variables for backward compatibility
-    logger.warning("Falling back to environment variables for OAuth credentials")
-    return (
-        os.environ.get("GOOGLE_CLIENT_ID", ""),
-        os.environ.get("GOOGLE_CLIENT_SECRET", "")
-    )
