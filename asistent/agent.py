@@ -25,6 +25,7 @@ from .tools.operational.smart_query import (
 root_agent = Agent(
     name="RagAgent",
     # Using Gemini 2.5 Flash for best performance with RAG operations
+    # Vertex AI will be used via GOOGLE_GENAI_USE_VERTEXAI env var
     model="gemini-2.5-flash",
     description="Vertex AI RAG Agent",
     tools=[
@@ -47,6 +48,9 @@ root_agent = Agent(
         get_corpus_info,
         delete_corpus,
         delete_document,
+        calendar_tool_set,
+        docs_tool_set,
+        gmail_tool_set,
     ],
     instruction="""
     # Agente Legal Inteligente con RAG Multi-Corpus
@@ -144,6 +148,23 @@ root_agent = Agent(
     8. `rag_query`, `list_corpora`, `create_corpus`, `add_data`, `get_corpus_info`, `delete_document`, `delete_corpus`
        - These work as before but are now supplemented by the intelligent tools above
     
+    ## Tool Calling Guidelines
+
+    When calling a tool, you must call the function directly with the final, calculated arguments.
+    Do NOT generate Python code to calculate arguments (like dates or times). You must calculate the values internally and provide them as literals in the function call.
+
+    **BAD EXAMPLE**:
+    ```python
+    from datetime import datetime, timedelta
+    tomorrow = datetime.now() + timedelta(days=1)
+    print(calendar_events_list(start_time=tomorrow.isoformat()))
+    ```
+
+    **GOOD EXAMPLE**:
+    ```
+    print(calendar_events_list(start_time='2025-10-13T12:00:00Z'))
+    ```
+
     ## INTERNAL: Technical Implementation Details
 
     This section is NOT user-facing information - don't repeat these details to users:

@@ -61,6 +61,7 @@ gcloud auth application-default login
 
 # Enable required APIs
 gcloud services enable aiplatform.googleapis.com
+gcloud services enable secretmanager.googleapis.com
 ```
 
 ### Environment Configuration
@@ -70,22 +71,48 @@ Create `.env` file in the `asistent/` directory with:
 ```env
 GOOGLE_CLOUD_PROJECT=your-project-id
 GOOGLE_CLOUD_LOCATION=your-location
+GOOGLE_GENAI_USE_VERTEXAI=TRUE
+```
+
+### Local Testing
+
+```bash
+# Test agent locally with interactive OAuth flow
+python client/agent_client.py
+
+# Test DocsToolset workflow (NEW)
+python test_docs_workflow.py
+
+# Test specific functionality
+python create_test_doc.py
+python test_drive_permissions.py
+```
+
+### Deployment
+
+```bash
+# Deploy to Vertex AI Agent Engine
+python deploy_agent_engine.py
+
+# Test deployed agent
+python test_deployed_agent.py
+```
+
+### Secret Management
+
+```bash
+# Store OAuth credentials in Secret Manager
+echo -n "YOUR_CLIENT_ID" | gcloud secrets create google-client-id --data-file=-
+echo -n "YOUR_CLIENT_SECRET" | gcloud secrets create google-client-secret --data-file=-
+
+# Store Drive folder configuration
+echo -n "DRIVE_FOLDER_ID" | gcloud secrets create drive-root-folder-id --data-file=-
+
+# Store allowed users list (JSON array)
+echo -n '["user1@example.com", "user2@example.com"]' | gcloud secrets create allowed-users --data-file=-
 ```
 
 ## Code Architecture
-
-### Multi-Corpus Architecture
-
-The system is designed around **6 specialized corpus types** for optimal legal document processing:
-
-1. **certificaciones** - Templates and examples of legal certifications
-2. **compra_venta** - Real estate and personal property sale contracts
-3. **locacion** - Urban and commercial lease agreements
-4. **poderes** - Powers of attorney (general, special, revocations)
-5. **reglamento_ph** - Condominium regulations and administration
-6. **marco_legal** - Legal framework (Civil Code, laws, jurisprudence)
-
-Each corpus has specialized configurations for chunk size, overlap, and embedding parameters optimized for its document type.
 
 ### Core Components
 
@@ -93,6 +120,7 @@ Each corpus has specialized configurations for chunk size, overlap, and embeddin
    - Uses Google ADK Agent framework
    - Configured with Gemini 2.5 Flash model
    - Specialized for legal contract analysis in Spanish (Argentina)
+   - Implements both RAG and Google Workspace tools
    - Maintains internal consistency checking
 
 2. **Package Initialization (`asistent/__init__.py`)**
@@ -103,10 +131,22 @@ Each corpus has specialized configurations for chunk size, overlap, and embeddin
 3. **Configuration (`asistent/config.py`)**
    - Centralized settings for RAG operations
    - Default values for chunk size, overlap, embedding model
-   - Multi-corpus specific configurations
    - Project and location configuration
 
-4. **Current Tools Directory (`asistent/tools/`)**
+4. **Authentication Module (`asistent/auth/`)**
+   - **`auth_config.py`**: ADK-native OAuth2 configuration
+   - Implements official ADK authentication pattern (6-step flow)
+   - Manages Google Workspace API scopes (Drive, Docs)
+   - Integrates with Secret Manager for credentials
+
+5. **Secrets Management (`asistent/secrets.py`)**
+   - Retrieves sensitive configuration from Google Cloud Secret Manager
+   - Functions for OAuth credentials, Drive folder IDs, allowed users
+   - Handles URL extraction and JSON parsing
+
+6. **Tools Directory (`asistent/tools/`)**
+
+   **RAG Tools** (no authentication required):
    - `rag_query.py`: Query documents in corpora
    - `list_corpora.py`: List available document corpora
    - `create_corpus.py`: Create new corpora
@@ -114,7 +154,6 @@ Each corpus has specialized configurations for chunk size, overlap, and embeddin
    - `get_corpus_info.py`: Get detailed corpus information
    - `delete_document.py`: Delete specific documents
    - `delete_corpus.py`: Delete entire corpora
-   - `utils.py`: Shared utility functions for corpus management
 
 ### Planned Architecture Extensions
 
@@ -149,6 +188,7 @@ asistent/tools/
 - Uses ADK ToolContext for maintaining agent state
 - Tracks "current corpus" for operations
 - Caches corpus existence checks
+- Stores OAuth credentials per session
 - Manages resource name resolution
 
 ### Key Design Patterns
@@ -157,10 +197,10 @@ asistent/tools/
 - Full Vertex AI resource names are used internally but hidden from users
 - Confirmation required for destructive operations (delete_document, delete_corpus)
 - Error handling with appropriate user feedback
+- OAuth credentials cached and shared between tools
+- Automatic token refresh on 401/403 errors
 
 ## Dependencies
-
-### Current Dependencies
 
 Main dependencies from `requirements.txt`:
 
@@ -221,8 +261,39 @@ gh issue develop <issue-number> --repo cardugarte/adk-rag-agent
 # Run tests for specific corpus
 python -m pytest tests/corpus/test_<corpus_type>.py
 
-# Run full test suite
-python -m pytest tests/
+**Benefits of DocsToolset workflow**:
+- Separation of concerns (business logic vs. document operations)
+- Access to all DocsToolset capabilities (formatting, batch operations, etc.)
+- Future-proof as DocsToolset is maintained by Google
+- More flexible for complex document operations
+
+### Resource Name Resolution
+
+The `utils.py` module handles three corpus name formats:
+1. Full resource name: `projects/{id}/locations/{loc}/ragCorpora/{name}`
+2. Display name: User-friendly name (resolved via API lookup)
+3. Short ID: Just the corpus identifier (constructed into full name)
+
+### OAuth2 Credential Flow
+
+Tools requiring authentication follow this pattern:
+```python
+# 1. Import auth config
+from asistent.auth.auth_config import get_google_oauth_auth_scheme, get_google_oauth_credential
+
+# 2. Decorate tool with auth
+@agent_tool(
+    auth_config=AuthConfig(
+        auth_scheme=get_google_oauth_auth_scheme(),
+        auth_credential=get_google_oauth_credential()
+    )
+)
+def my_tool(...):
+    # 3. Get credentials from context
+    creds = tool_context.state.get('google_workspace_credentials')
+
+    # 4. Build service
+    service = build('drive', 'v3', credentials=creds)
 ```
 
 ### Multi-Corpus Operations
@@ -231,9 +302,16 @@ python -m pytest tests/
 # Initialize all corpus types
 python -c "from asistent.tools.corpus_manager import initialize_all_corpus; initialize_all_corpus()"
 
-# Test cross-corpus functionality
-python scripts/test_cross_corpus.py
-```
+All sensitive configuration stored in Secret Manager:
+- `google-client-id`: OAuth2 client ID
+- `google-client-secret`: OAuth2 client secret
+- `drive-root-folder-id`: Root folder for user documents
+- `allowed-users`: JSON array of authorized email addresses
+
+Access via `asistent/secrets.py` functions:
+- `get_secret(secret_id)`: Generic secret retrieval
+- `get_drive_root_folder_id()`: Drive folder with URL parsing
+- `get_allowed_users()`: User list with JSON parsing
 
 ## Authentication Requirements
 
