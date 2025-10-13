@@ -25,7 +25,19 @@ root_agent = Agent(
     model="gemini-2.5-flash",
     description="Vertex AI RAG Agent",
     tools=[
+        # Primary operational tools (most used by the agent)
+        smart_query,
+        cross_corpus_query,
+        detect_document_type,
+
+        # Basic operational tools
         rag_query,
+
+        # Administrative tools (for corpus management)
+        list_all_corpora,
+        create_specialized_corpus,
+        get_corpus_by_type,
+        initialize_corpus_types,
         list_corpora,
         create_corpus,
         add_data,

@@ -2,9 +2,40 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Language and Communication Guidelines
+
+**IMPORTANT - Language Rules:**
+
+- **Communication with user**: Always respond in Spanish (from Argentina)
+- **Code writing**: Always write code, comments, docstrings, variable names, and function names in English
+- **Git commits**: Always write commit messages in English following conventional commit format
+- **Documentation**: Write technical documentation in English, but explain it to the user in Spanish when asked
+
+**Examples:**
+
+- ✅ Code: `def create_specialized_corpus(corpus_type: str):`
+- ✅ Commit: `feat: implement intelligent document detection`
+- ✅ User communication: "He implementado la funcionalidad de detección automática..."
+- ❌ Code in Spanish: `def crear_corpus_especializado(tipo_corpus: str):`
+- ❌ Commit in Spanish: `feat: implementar detección inteligente`
+
 ## Project Overview
 
-This is a Google Agent Development Kit (ADK) implementation of a RAG (Retrieval Augmented Generation) agent specialized in legal contract analysis using Google Cloud Vertex AI. The agent uses **ADK native OAuth2 authentication** for Google Workspace integration and can be deployed to Vertex AI Agent Engine.
+This is a Google Agent Development Kit (ADK) implementation of a RAG (Retrieval Augmented Generation) agent specialized in legal contract analysis using Google Cloud Vertex AI. The agent is designed to evolve into a comprehensive legal automation suite with:
+
+- **Multi-corpus architecture** for specialized document types
+- **Intelligent contract generation** with legal validation
+- **Google Workspace integration** (Docs, Gmail, Calendar)
+- **Automated communication workflows**
+- **Advanced legal analysis** and compliance checking
+
+### Vision
+
+Transform from a basic RAG agent into a complete legal assistant capable of drafting contracts, detecting inconsistencies, managing document workflows, and automating client communications while ensuring compliance with Argentine legal standards.
+
+### Current Status
+
+**Phase 1 Foundation** - Multi-corpus architecture and smart analysis capabilities are in active development.
 
 ## Commands
 
@@ -124,56 +155,33 @@ echo -n '["user1@example.com", "user2@example.com"]' | gcloud secrets create all
    - `delete_document.py`: Delete specific documents
    - `delete_corpus.py`: Delete entire corpora
 
-   **Google Workspace Tools** (OAuth2 required):
-   - `save_document_to_drive.py`: Save contracts as Google Docs (legacy)
-   - `list_user_documents.py`: List user's saved documents
-   - `document_context_helper.py`: **NEW** Context preparation for DocsToolset
-     - `prepare_document_context`: Prepares folder, filename, versioning
-     - `finalize_document_in_drive`: Finalizes and organizes created documents
+### Planned Architecture Extensions
 
-   **Google API Toolsets** (ADK built-in, OAuth2 required):
-   - **DocsToolset**: Google's native Docs API toolset
-     - Configured with OAuth credentials from Secret Manager
-     - Provides multiple document operation tools
-     - Used in 3-step workflow with context helpers
+Future tools will be organized in specialized modules:
 
-   **Shared Utilities**:
-   - `utils.py`: Corpus name resolution, state management
-
-### Authentication Architecture
-
-The project uses **ADK native OAuth2 authentication** following the official 6-step pattern:
-
-1. **Tool Configuration**: Tools declare OAuth2 requirements via `auth_config.py`
-2. **Credential Request**: ADK detects when OAuth is needed
-3. **User Authorization**: User completes OAuth flow in browser
-4. **Token Exchange**: ADK automatically exchanges auth code for tokens
-5. **Credential Caching**: Tokens stored in `tool_context.state` for reuse
-6. **Auto Refresh**: ADK handles token refresh transparently
-
-**Key Files**:
-- `asistent/auth/auth_config.py`: OAuth2 scheme and credential configuration
-- `client/agent_client.py`: Interactive OAuth flow for local testing
-- `save_document_to_drive.py` & `list_user_documents.py`: Example tool implementations
-
-**Authentication Flow**:
-- RAG tools work without authentication (use Vertex AI service account)
-- Workspace tools trigger OAuth when first accessed
-- Credentials are shared across tools in the same session
-- Session state persists credentials between tool calls
-
-### Deployment Architecture
-
-**Local Development**:
-- `client/agent_client.py`: Interactive runner with OAuth support
-- InMemorySessionService for session management
-- Manual OAuth flow via console interaction
-
-**Production (Agent Engine)**:
-- `deploy_agent_engine.py`: Deployment script
-- `test_deployed_agent.py`: Remote agent testing
-- VertexAiSessionService (automatic session persistence)
-- Auto-scaling and built-in monitoring
+```text
+asistent/tools/
+├── analysis/
+│   ├── template_analyzer.py
+│   ├── consistency_checker.py
+│   ├── document_comparator.py
+│   └── risk_assessor.py
+├── generation/
+│   ├── contract_generator.py
+│   ├── template_manager.py
+│   └── clause_recommender.py
+├── integrations/
+│   ├── google_docs_creator.py
+│   ├── gmail_sender.py
+│   └── calendar_manager.py
+├── validation/
+│   ├── legal_compliance.py
+│   ├── cross_corpus_query.py
+│   └── corpus_manager.py
+└── intelligence/
+    ├── learning_engine.py
+    └── analytics_reporter.py
+```
 
 ### State Management
 
@@ -195,74 +203,63 @@ The project uses **ADK native OAuth2 authentication** following the official 6-s
 ## Dependencies
 
 Main dependencies from `requirements.txt`:
-- `google-adk>=1.16.0`: Google Agent Development Kit
-- `google-cloud-aiplatform[adk,agent_engines]>=1.112.0`: Vertex AI integration
-- `google-genai>=1.41.0`: Gemini model access
-- `google-cloud-storage>=2.18.0`: GCS file handling
-- `google-cloud-secret-manager>=2.22.0`: Secure configuration
-- `google-api-python-client>=2.157.0`: Google Workspace APIs
-- `python-dotenv>=1.0.0`: Environment variable management
-- `authlib>=1.5.1`: OAuth2 implementation (ADK dependency)
 
-## Important Technical Details
+- `google-adk`: Google Agent Development Kit
+- `google-generativeai`: Gemini model access
+- `google-cloud-aiplatform`: Vertex AI integration
+- `google-cloud-storage`: GCS file handling
+- `google-genai`: Additional Google AI utilities
+- `python-dotenv`: Environment variable management
+- `git-python`: Git integration
 
-### Agent Instruction Pattern
+### Planned Additional Dependencies
 
-The agent follows a specific workflow for document generation:
-1. Gather requirements from user
-2. Query templates using RAG
-3. Generate initial draft
-4. Iterate based on user feedback
-5. Save to Drive only when explicitly approved
+For the full roadmap implementation:
 
-**Approval phrases recognized**:
-- "Guardá este contrato"
-- "Guardalo en Drive"
-- "Creá el documento final"
-- "Exportá este contrato"
+**Google Workspace Integration:**
 
-### Document Versioning
+- `google-api-python-client`: Google APIs client
+- `google-auth-oauthlib`: OAuth authentication
+- `google-auth-httplib2`: HTTP transport for Google APIs
 
-Automatic version control for saved documents:
-- Filenames auto-normalized: "Contrato Compra-Venta" → "contrato-compra-venta"
-- Auto-increment on duplicates: `v2`, `v3`, etc.
-- User always informed of final saved version name
+**Document Processing & Templates:**
 
-### DocsToolset Workflow (NEW)
+- `python-docx`: Word document manipulation
+- `jinja2`: Template engine for contract generation
+- `pdfplumber`: PDF text extraction
 
-The agent now supports two approaches for saving documents:
+**Data Processing & Analysis:**
 
-**Option A: Legacy single-tool approach**
-```python
-save_document_to_drive(
-    document_title="Contrato Compra-Venta Juan Pérez",
-    document_content="...",
-    document_type="compra-venta"
-)
+- `pandas`: Data analysis and manipulation
+- `scikit-learn`: Machine learning utilities
+- `spacy`: Natural language processing
+- `regex`: Advanced pattern matching
+
+**Argentine-specific Validations:**
+
+- `validate-docbr`: Document validation utilities
+- Custom validators for CUIT/DNI/addresses
+
+## Project Commands
+
+### GitHub Project Management
+
+```bash
+# View project status
+gh project view 10 --owner cardugarte
+
+# Add issue to project
+gh project item-add 10 --owner cardugarte --url <issue-url>
 ```
 
-**Option B: DocsToolset 3-step workflow** (recommended for advanced use)
-```python
-# Step 1: Prepare context (folder, versioning)
-context = prepare_document_context(
-    document_title="Contrato Compra-Venta Juan Pérez",
-    document_type="compra-venta"
-)
-# Returns: {"versioned_name": "contrato-compra-venta-juan-perez-v2", ...}
+### Development Workflow
 
-# Step 2: Create document with DocsToolset
-doc = DocsToolset.create_document(
-    title=context["versioned_name"],
-    content="..."
-)
-# Returns: {"document_id": "1abc123..."}
+```bash
+# Start working on an issue
+gh issue develop <issue-number> --repo cardugarte/adk-rag-agent
 
-# Step 3: Finalize (move to folder, get link)
-result = finalize_document_in_drive(
-    document_id=doc["document_id"]
-)
-# Returns: {"document_url": "https://docs.google.com/...", ...}
-```
+# Run tests for specific corpus
+python -m pytest tests/corpus/test_<corpus_type>.py
 
 **Benefits of DocsToolset workflow**:
 - Separation of concerns (business logic vs. document operations)
@@ -299,7 +296,11 @@ def my_tool(...):
     service = build('drive', 'v3', credentials=creds)
 ```
 
-### Secret Manager Integration
+### Multi-Corpus Operations
+
+```bash
+# Initialize all corpus types
+python -c "from asistent.tools.corpus_manager import initialize_all_corpus; initialize_all_corpus()"
 
 All sensitive configuration stored in Secret Manager:
 - `google-client-id`: OAuth2 client ID
@@ -316,46 +317,60 @@ Access via `asistent/secrets.py` functions:
 
 - Google Cloud account with billing enabled
 - Vertex AI API enabled in the project
-- Secret Manager API enabled
-- OAuth2 client credentials configured in Cloud Console
-- Application Default Credentials configured locally
-- Appropriate IAM permissions:
-  - `aiplatform.reasoningEngines.create` (for deployment)
-  - `secretmanager.versions.access` (for secrets)
-  - `storage.buckets.get` (for staging bucket)
+- Application Default Credentials configured
+- Appropriate IAM permissions for Vertex AI resources
 
-## Deployment Checklist
+## Development Roadmap & GitHub Project
 
-Before deploying to Agent Engine:
+### GitHub Project
 
-1. **OAuth Configuration**:
-   - Create OAuth 2.0 client in Cloud Console
-   - Add authorized redirect URIs
-   - Store credentials in Secret Manager
+**URL**: <https://github.com/users/cardugarte/projects/10>
+**Title**: Agente Legal Inteligente - RAG Development
 
-2. **Environment Setup**:
-   - Update `deploy_agent_engine.py` with project details
-   - Ensure staging bucket exists and is accessible
-   - Verify all required secrets exist in Secret Manager
+The project contains 8 detailed issues organized across 5 epics with clear dependencies and acceptance criteria.
 
-3. **Testing**:
-   - Test locally first: `python client/agent_client.py`
-   - Verify RAG tools work without auth
-   - Verify Workspace tools trigger OAuth correctly
-   - Confirm credential caching and reuse
+### Development Phases
 
-4. **Deployment**:
-   - Run `python deploy_agent_engine.py`
-   - Wait 5-10 minutes for deployment
-   - Test with `python test_deployed_agent.py`
-   - Monitor logs and traces in Cloud Console
+#### Phase 1: Foundation - Multi-Corpus & Analysis (High Priority)
 
-## References
+- **Issue #1**: Corpus Manager - Foundation for multi-corpus architecture
+- **Issue #4**: Template Analyzer - Automatic contract type detection
+- **Issue #5**: Enhanced Consistency Checker - Argentine legal validations
 
-- [ADK Documentation](https://google.github.io/adk-docs/)
-- [ADK Authentication Guide](https://google.github.io/adk-docs/tools/authentication/)
-- [Agent Engine Overview](https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/overview)
-- [Vertex AI RAG Documentation](https://cloud.google.com/vertex-ai/generative-ai/docs/rag-overview)
-- Project-specific docs in `docs/` directory:
-  - `AUTH_REFACTOR_SUMMARY.md`: Technical auth refactoring details
-  - `DEPLOYMENT_GUIDE.md`: Complete deployment walkthrough
+#### Phase 2: Smart Generation & Validation (High Priority)
+
+- **Issue #2**: Cross-Corpus Query System - Intelligent multi-corpus searches
+- **Issue #3**: Legal Compliance Checker - Automated legal validation
+- **Issue #8**: Smart Contract Generator - Automated contract generation
+
+#### Phase 3: Workspace Integration (Medium Priority)
+
+- **Issue #6**: Google Docs Auto-Creator - Document generation integration
+
+#### Phase 4: Communication Automation (Medium Priority)
+
+- **Issue #7**: Email Automation System - Automated client communications
+
+### Implementation Order
+
+1. **Corpus Manager** (Foundation - enables all other features)
+2. **Template Analyzer** (Can be developed in parallel with #1)
+3. **Cross-Corpus Query System** (Depends on Corpus Manager)
+4. **Enhanced Consistency Checker** (Depends on Template Analyzer)
+5. **Legal Compliance Checker** (Depends on #1, #2)
+6. **Smart Contract Generator** (Depends on #1-#5)
+
+### Issue Labels Organization
+
+- **Epics**: `epic:multi-corpus`, `epic:smart-analysis`, `epic:workspace-integration`, `epic:communication`, `epic:advanced-ai`
+- **Corpus Types**: `corpus:certificaciones`, `corpus:compra-venta`, `corpus:locacion`, `corpus:poderes`, `corpus:reglamento-ph`, `corpus:marco-legal`
+- **Priority**: `priority:high`, `priority:medium`, `priority:low`
+- **Type**: `type:foundation`, `type:feature`
+
+### Key Dependencies
+
+- All corpus-related features depend on Issue #1 (Corpus Manager)
+- Advanced analysis features depend on Template Analyzer
+- Integration features require foundation to be complete
+- Each issue has detailed acceptance criteria and story point estimates
+- does not include co-authorship mentions or third-party advertising (e.g., Claude Code).
