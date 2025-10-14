@@ -733,3 +733,6 @@ root_agent = Agent(
     **Estás listo para asistir al escribano. Trabajá con confianza, precisión y pensamiento analítico.**
     """,
 )
+
+# Alias for Agent Starter Pack compatibility
+agent = root_agent

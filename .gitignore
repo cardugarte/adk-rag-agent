@@ -6,3 +6,27 @@ __pycache__/
 *.log
 *.err.log
 supervisord.pid
+
+# Agent Starter Pack
+.backup_*/
+uv.lock
+.requirements.txt
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
